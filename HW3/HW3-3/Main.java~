@@ -1,0 +1,169 @@
+
+import static java.lang.Math.pow;
+import java.util.ArrayList;
+import java.util.Collections;
+
+
+public class Main {
+
+  
+    public static void main(String[] args) {
+        ArrayList<Cord<Double,Double>> cds = new ArrayList<Cord<Double,Double>>();//Koordinat Arrayi
+        
+        //Koorinat arrayinin ilklendirilmesi
+        cds.add(new Cord<>(0.0,1.0000));
+        cds.add(new Cord<>(0.25,1.2840));
+        cds.add(new Cord<>(0.5,1.6487));
+        cds.add(new Cord<>(0.75,2.1170));
+        cds.add(new Cord<>(1.00,2.7183));
+        
+        System.out.println("\nCoordinates : " + cds + "\n");
+        System.out.println("\nf(x) = " + leastSquaresPoly(cds,2) + "\n");//fonksiyonu ekrana bas
+    }
+    
+    public static String leastSquaresPoly(ArrayList<Cord<Double,Double>> cds,int m){
+        int n = cds.size();
+        double coa;
+        //toplam sembollerinin islemlerinden gelen denklemlerin matrixi
+        ArrayList<ArrayList<Double>> matrix = new ArrayList<ArrayList<Double>>();
+        ArrayList<Double> row = null;//matrix satiri
+        ArrayList<Double> roots = new ArrayList<Double>();//matrixin kokleri
+        StringBuilder sb = new StringBuilder();//dondurulecek fonksiyonu icerecek string
+        
+        for(int a = 0 ; a <= m ; a++){// toplam sembollerinin implementasyonu
+            System.out.print("eq" + (a + 1) + " = ");
+            row = new ArrayList<>();
+            for(int k = 0 ; k <= m ; k++){
+                coa = 0.0;
+                for(int i = 0 ; i < n ; i++){
+                    coa += pow(cds.get(i).getKey(),k + a);
+                }
+                System.out.print(coa + "a" + k);
+                row.add(coa);
+                if(k != n)
+                    System.out.print(" + ");                
+            }
+            System.out.print(" = ");
+            coa = 0.0;
+            for(int i = 0 ; i < n ; i++){
+                coa += cds.get(i).getValue() * pow(cds.get(i).getKey(),a);
+            }   
+            System.out.println(coa);
+            row.add(coa);
+            
+            matrix.add(row);
+        }
+        System.out.println();
+        roots = SolveMatrixGESP(matrix);///HW2 DE YAZDİGİM SCALED PARTIAL PIVOTING
+        for(int i = 0 ; i < roots.size() ; i++){
+            System.out.printf("a%d =  %f ",i,roots.get(i));
+            sb.append(String.format("%.5f",roots.get(i)));
+    
+            if(i != 0)
+                sb.append("x^" + i);
+                
+            if(i != roots.size() - 1){
+                System.out.print(", ");
+                sb.append(" + ");
+            }
+        }
+        System.out.println();
+
+        return sb.toString();
+    }
+    
+    
+    public static ArrayList<Double> SolveMatrixGESP(ArrayList<ArrayList<Double>> matrix){
+        ArrayList<Double> maxRows = new ArrayList<>();
+        
+        for(int i = 0 ; i < matrix.size() ; ++i)
+            maxRows.add(Max(matrix.get(i)));
+        
+        for(int i = 0 ; i < matrix.size() - 1; ++i){
+            int maxInd = 0;
+            double max = 0;
+            for(int j = i ; j < matrix.size() ; ++j){
+                double rate = Math.abs(matrix.get(j).get(i)/maxRows.get(j));
+
+                if(rate > max){
+                    max = rate;
+                    maxInd = j;
+                }
+            }
+            SwapRows(matrix, i, maxInd);
+            
+            double tmp = maxRows.get(i);
+            maxRows.set(i,maxRows.get(maxInd));
+            maxRows.set(maxInd, tmp);
+            
+            OperateRows(matrix, i);
+
+        }
+        
+        ArrayList<Double> roots = new ArrayList<>();
+        ArrayList<Double> rightSide = new ArrayList<>();
+        for(int i = 0 ; i < matrix.size() ; ++i){
+            rightSide.add(matrix.get(i).get(matrix.size()));
+        }
+        for(int i = matrix.size() - 1; i >= 0  ; --i){
+            double factor = matrix.get(i).get(i);
+            double total = 0;
+            for(int j = matrix.size() - 1 ; j > i  ; --j){
+                double num = matrix.get(i).get(j);
+                total += num * roots.get(roots.size() - 1);
+            }
+            roots.add((rightSide.get(i) - total) / factor);
+        }
+        int i = 0;
+        for( ; i < matrix.size() ; ++i)
+            if(!matrix.get(matrix.size() - 1).get(i).equals(0))
+                break;
+        
+        if(i == matrix.size() - 1 || roots.get(0).equals(Double.NaN)){
+            System.out.println("System has infinite solutions");
+            return null;
+        }
+        if(i != matrix.size() && matrix.get(matrix.size() - 1).get(matrix.size()).equals(0)
+                || Double.isInfinite(roots.get(0))){
+            System.out.println("No Solution Exists!");
+            return null;
+        }
+        Collections.reverse(roots);
+        return roots;
+        
+    }
+    
+    public static double Max(ArrayList<Double> list){
+        double max = list.get(0);
+        for(int i = 0 ; i < list.size() - 1; ++i){
+            double item = Math.abs(list.get(i));
+            max = ( item > max)? item : max;
+        }
+        
+        return max;
+    }
+    
+    public static void OperateRows(ArrayList<ArrayList<Double>> matrix,int pivot){
+        double mult = matrix.get(pivot).get(pivot);
+        //System.out.println("mult : " + mult);
+        for(int i = pivot + 1 ; i < matrix.size() ; ++i){
+            double div = matrix.get(i).get(pivot);
+            if(div != 0){
+                for(int j = 0 ; j < matrix.size() + 1; ++j){
+                    double pvtCur = matrix.get(pivot).get(j);
+                    double cur = matrix.get(i).get(j);
+                    matrix.get(i).set(j,cur*(-1*mult)/div + pvtCur);
+                }
+            }
+        }
+    }
+    
+    public static ArrayList<ArrayList<Double>> SwapRows
+        (ArrayList<ArrayList<Double>> matrix , int i1 , int i2){
+        ArrayList<Double> tmp1 = matrix.get(i1);
+        matrix.set(i1, matrix.get(i2));
+        matrix.set(i2, tmp1); 
+        
+        return matrix;
+    }
+}

@@ -1,0 +1,4 @@
+
+  -----> BISECTION METHOD <-----
+
+f(a) * f(b) > 0 , no solution exists!
